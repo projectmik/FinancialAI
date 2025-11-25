@@ -18,6 +18,18 @@
         .drag-active { border-color: #3b82f6; background-color: #eff6ff; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Print Styles: Clean up the page when saving to PDF */
+        @media print {
+            body { background-color: white; }
+            #uploadSection, #debugSection, .no-print, button { display: none !important; }
+            #dashboard { display: block !important; margin-top: 0 !important; }
+            .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #eee; }
+            .bg-slate-900 { background-color: white !important; color: black !important; padding: 0 !important; margin-bottom: 20px; }
+            .text-slate-400 { color: #666 !important; }
+            /* Ensure charts print clearly */
+            canvas { max-height: 300px !important; }
+        }
     </style>
 </head>
 <body class="min-h-screen text-gray-800">
@@ -28,13 +40,13 @@
                 <i class="ph ph-robot text-4xl text-blue-400"></i>
                 <div>
                     <h1 class="text-2xl font-bold">Financial Auditor AI</h1>
-                    <p class="text-slate-400 text-sm">100% Private • PDF & CSV Support</p>
+                    <p class="text-slate-400 text-sm">100% Private • Logic Engine v2.0</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
         
         <div id="uploadSection" class="bg-white rounded-xl shadow-md p-10 text-center transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative">
             <input type="file" id="fileInput" accept=".csv,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
@@ -51,7 +63,7 @@
             </div>
         </div>
 
-        <!-- Debug Section (Hidden by default, shown on error) -->
+        <!-- Debug Section -->
         <div id="debugSection" class="hidden mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
             <h3 class="text-red-700 font-bold mb-2">⚠️ Debug Info</h3>
             <p class="text-sm text-red-600 mb-2">The tool couldn't find transactions. Copy the text below to check the format:</p>
@@ -59,6 +71,20 @@
         </div>
 
         <div id="dashboard" class="hidden space-y-6 mt-6">
+            
+            <!-- Action Bar -->
+            <div class="flex justify-between items-center no-print">
+                <h2 class="text-xl font-bold text-gray-700">Analysis Report</h2>
+                <div class="flex gap-2">
+                    <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-sm">
+                        <i class="ph ph-printer"></i> Save as PDF
+                    </button>
+                    <button onclick="location.reload()" class="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition">
+                        <i class="ph ph-arrow-counter-clockwise"></i> Reset
+                    </button>
+                </div>
+            </div>
+
             <!-- Summary Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
@@ -76,20 +102,30 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div class="bg-slate-50 border-b border-gray-100 p-4 flex items-center gap-2">
-                        <i class="ph ph-brain text-purple-500 text-xl"></i>
-                        <h3 class="font-bold text-gray-700">Financial Insights</h3>
-                    </div>
-                    <div id="suggestionsList" class="p-6 space-y-4"></div>
+            <!-- Logic Engine Insights -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="bg-slate-50 border-b border-gray-100 p-4 flex items-center gap-2">
+                    <i class="ph ph-brain text-purple-500 text-xl"></i>
+                    <h3 class="font-bold text-gray-700">Actionable Advice</h3>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4">
-                    <h3 class="font-bold text-gray-700 mb-4 text-center">Spending Breakdown</h3>
+                <div id="suggestionsList" class="p-6 grid grid-cols-1 gap-4"></div>
+            </div>
+
+            <!-- VISUALIZATION SECTION -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Doughnut Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-700 mb-4 text-center">Budget Breakdown (%)</h3>
                     <div class="relative h-64 w-full"><canvas id="spendingChart"></canvas></div>
+                </div>
+                <!-- Bar Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-700 mb-4 text-center">Category Comparison ($)</h3>
+                    <div class="relative h-64 w-full"><canvas id="barChart"></canvas></div>
                 </div>
             </div>
 
+            <!-- Detailed Table -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100"><h3 class="font-bold text-gray-700">Spending by Category</h3></div>
                 <div class="overflow-x-auto">
@@ -106,12 +142,38 @@
                     </table>
                 </div>
             </div>
-            
-            <button onclick="location.reload()" class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition">Analyze Another File</button>
         </div>
     </div>
 
     <script>
+        // --- KEYWORD BRAIN ---
+        const KEYWORDS = {
+            'Groceries': ['WALMART', 'KROGER', 'SAFEWAY', 'PUBLIX', 'GROCERY', 'TRADER JOE', 'TARGET', 'WHOLE FOODS', 'COSTCO', 'ALDI', 'HEB', 'WEGMANS', 'MARKET', 'FOOD LION'],
+            'Dining': ['STARBUCKS', 'MCDONALDS', 'UBER EATS', 'DOORDASH', 'GRUBHUB', 'RESTAURANT', 'CAFE', 'GRILL', 'DINER', 'PIZZA', 'BURGER', 'CHIPOTLE', 'TACO', 'CHICK-FIL-A', 'DUNKIN', 'COFFEE', 'BAR', 'PUB', 'SUSHI', 'EAT'],
+            'Transport': ['UBER', 'LYFT', 'GAS', 'SHELL', 'CHEVRON', 'BP ', 'EXXON', 'MOBIL', 'TEXACO', 'FUEL', 'PETROL', 'SUBWAY', 'TRANSIT', 'TRAIN', 'AMTRAK', 'PARKING', 'AIRLINES', 'DELTA', 'UNITED', 'JETBLUE', 'METRO'],
+            'Utilities': ['ELECTRIC', 'WATER', 'POWER', 'ENERGY', 'PG&E', 'COMCAST', 'VERIZON', 'AT&T', 'T-MOBILE', 'INTERNET', 'UTILITY', 'WASTE', 'SEWER', 'INSURANCE'],
+            'Subscriptions': ['NETFLIX', 'SPOTIFY', 'HULU', 'DISNEY', 'HBO', 'AMAZON PRIME', 'APPLE.COM', 'ITUNES', 'GOOGLE', 'YOUTUBE', 'PATREON', 'SUBSCRIPTION'],
+            'Shopping': ['AMAZON', 'EBAY', 'ETSY', 'BEST BUY', 'APPLE STORE', 'NIKE', 'ZARA', 'H&M', 'UNIQLO', 'CLOTHING', 'SHOES', 'MALL', 'TJ MAXX', 'MARSHALLS', 'ROSS'],
+            'Housing': ['RENT', 'MORTGAGE', 'APARTMENT', 'HOA', 'LODGING', 'HOTEL', 'AIRBNB'],
+            'Education': ['COLLEGE', 'UNIVERSITY', 'SCHOOL', 'TUITION', 'BOOKS', 'UDEMY', 'COURSERA', 'STUDENT'],
+            'Health': ['PHARMACY', 'CVS', 'WALGREENS', 'RITE AID', 'DOCTOR', 'DENTAL', 'HOSPITAL', 'CLINIC', 'MEDICAL', 'FITNESS', 'GYM', 'HEALTH'],
+            'Income': ['PAYCHECK', 'DEPOSIT', 'SALARY', 'EMPLOYER', 'DIRECT DEPOSIT', 'REFUND'],
+            'Payments': ['PAYMENT', 'CREDIT CARD', 'THANK YOU', 'DIRECT PAY']
+        };
+
+        function detectCategory(description, rawCategory) {
+            const descUpper = description.toUpperCase();
+            for (const [category, words] of Object.entries(KEYWORDS)) {
+                if (words.some(word => descUpper.includes(word))) {
+                    return category;
+                }
+            }
+            if (rawCategory && rawCategory.length > 2 && rawCategory !== "Uncategorized") {
+                return rawCategory.trim();
+            }
+            return "Miscellaneous";
+        }
+
         // --- 1. FILE HANDLING ---
         const dropArea = document.getElementById('uploadSection');
         const fileInput = document.getElementById('fileInput');
@@ -152,7 +214,6 @@
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    // Join with special separator to preserve spacing better
                     fullText += textContent.items.map(item => item.str).join("  ") + "\n";
                 }
                 processData(fullText, 'pdf');
@@ -163,7 +224,7 @@
             }
         }
 
-        // --- 3. PROCESS DATA (REGEX FIX) ---
+        // --- 3. PROCESS DATA ---
         function processData(text, type) {
             const categories = {};
             let totalSpent = 0;
@@ -171,30 +232,25 @@
             let foundAny = false;
 
             if (type === 'pdf') {
-                // Clean up the text slightly
-                // Replace multiple spaces with single space
                 let cleanText = text.replace(/\s+/g, ' ');
-
-                // Pattern 1: Strict Discover (Date Date Desc $ Amount Category)
                 let regex = /(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(.*?)\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
                 let matches = [...cleanText.matchAll(regex)];
 
-                // Pattern 2: Loose (If Pattern 1 fails) - Looks for Date... $Amount...
                 if (matches.length === 0) {
-                    console.log("Trying loose regex...");
-                    // Date ... something ... $Amount ... something
                     regex = /(\d{2}\/\d{2}\/\d{2})\s+.*?\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
                     matches = [...cleanText.matchAll(regex)];
                 }
 
                 for (const match of matches) {
                     foundAny = true;
-                    let amountStr = match[match.length - 3].replace(/,/g, ''); // Amount is usually 3rd from end
-                    let category = match[match.length - 2].trim(); // Category is usually 2nd from end
-                    
-                    // Fix Category if it grabbed too much (stop at common words)
-                    category = category.split(/DIRECT PAY|PAYMENT|THANK YOU/)[0].trim();
-                    if(category.length > 30) category = "Uncategorized"; // Safety check
+                    let description = match[match.length - 4] || match[3];
+                    if(!description) description = match[0]; 
+
+                    let amountStr = match[match.length - 3].replace(/,/g, '');
+                    let rawCategory = match[match.length - 2].trim();
+                    rawCategory = rawCategory.split(/DIRECT PAY|PAYMENT|THANK YOU/)[0].trim();
+
+                    let category = detectCategory(description, rawCategory);
 
                     let amount = parseFloat(amountStr);
                     if (isNaN(amount)) continue;
@@ -207,18 +263,19 @@
                     }
                 }
             } else {
-                // CSV Logic
                 const lines = text.split('\n');
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i].split(',');
                     if (row.length < 4) continue;
+                    let description = row[1];
                     let amount = parseFloat(row[2]);
-                    let cat = row[3] ? row[3].trim() : "Unknown";
+                    let rawCat = row[3] ? row[3].trim() : "";
                     if (!amount) continue;
                     foundAny = true;
+                    let category = detectCategory(description, rawCat);
                     if (amount > 0) {
                         totalSpent += amount;
-                        categories[cat] = (categories[cat] || 0) + amount;
+                        categories[category] = (categories[category] || 0) + amount;
                     } else {
                         totalPayments += Math.abs(amount);
                     }
@@ -230,7 +287,7 @@
                 document.getElementById('uploadText').classList.remove('hidden');
                 document.getElementById('debugSection').classList.remove('hidden');
                 document.getElementById('debugText').value = text.slice(0, 2000) + "\n\n... (Text truncated)";
-                alert("No transactions found! Please check the 'Debug Info' box below to see what the tool saw.");
+                alert("No transactions found! Please check the 'Debug Info' box.");
                 return;
             }
 
@@ -261,6 +318,7 @@
             renderTableAndChart(spent, categories);
         }
 
+        // --- 5. LOGIC ENGINE (THE AI) ---
         function runLogicEngine(spent, payments, categories) {
             const list = document.getElementById('suggestionsList');
             list.innerHTML = ''; 
@@ -270,9 +328,11 @@
                 list.innerHTML += `<div class="border ${c} rounded-lg p-4 flex gap-3 items-start"><i class="ph ${i} text-xl mt-0.5"></i><div><h4 class="font-bold text-sm uppercase mb-1 opacity-80">${title}</h4><p class="text-sm">${text}</p></div></div>`;
             }
 
+            // 1. Debt Check
             if (spent > payments) addTip("Debt Warning", `You spent <b>${formatMoney(spent - payments)}</b> more than you paid off. Your balance is increasing.`, 'warn');
-            else addTip("Healthy Cash Flow", "You paid off more than you spent this month. Great work!", 'good');
+            else addTip("Healthy Cash Flow", `You paid off more than you spent this month. Consider moving the <b>${formatMoney(payments - spent)}</b> surplus to a High-Yield Savings Account.`, 'good');
 
+            // 2. Top Expense
             const sortedCats = Object.entries(categories).sort((a, b) => b[1] - a[1]);
             if (sortedCats.length > 0) {
                 const top = sortedCats[0];
@@ -280,8 +340,17 @@
                 addTip("Top Spending Area", `<b>${top[0]}</b> is your #1 category (${pct}%). Cut 10% here to save <b>${formatMoney(top[1]*0.1)}</b>.`, 'info');
             }
 
+            // 3. Dining Check
             let dining = (categories['Restaurants']||0) + (categories['Dining']||0);
-            if (dining/spent > 0.15) addTip("Dining Out", `Restaurants take up ${(dining/spent*100).toFixed(0)}% of your spending. Consider cooking home more often.`, 'warn');
+            if (dining/spent > 0.15) addTip("Dining Alert", `Restaurants take up ${(dining/spent*100).toFixed(0)}% of your spending. Cooking at home more often is the easiest way to save.`, 'warn');
+
+            // 4. Subscriptions Check
+            let subs = categories['Subscriptions'] || 0;
+            if (subs > 50) addTip("Subscription Audit", `You spent <b>${formatMoney(subs)}</b> on subscriptions. Check if you are actually using all of these services.`, 'warn');
+
+            // 5. Shopping Check
+            let shopping = (categories['Shopping']||0) + (categories['Merchandise']||0);
+            if (shopping/spent > 0.15) addTip("Impulse Buying Check", `Shopping is ${(shopping/spent*100).toFixed(0)}% of your budget. Try the '24-hour rule' before buying non-essentials.`, 'info');
         }
 
         function renderTableAndChart(totalSpent, categories) {
@@ -297,10 +366,31 @@
                 if (index < 7) { labels.push(cat); data.push(amount); }
             });
 
+            // CHART 1: DOUGHNUT
             new Chart(document.getElementById('spendingChart').getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+
+            // CHART 2: BAR CHART
+            new Chart(document.getElementById('barChart').getContext('2d'), {
+                type: 'bar',
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        label: 'Amount ($)',
+                        data: data, 
+                        backgroundColor: colors,
+                        borderRadius: 5
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
             });
         }
 
