@@ -4,17 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Financial Auditor - PDF & CSV Edition</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- PDF.js (The magic library that reads PDFs in browser) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
     <script>
-        // Set up the PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 
@@ -27,7 +22,6 @@
 </head>
 <body class="min-h-screen text-gray-800">
 
-    <!-- Header -->
     <div class="bg-slate-900 text-white py-6 shadow-lg">
         <div class="container mx-auto px-4">
             <div class="flex items-center gap-3">
@@ -40,10 +34,8 @@
         </div>
     </div>
 
-    <!-- Main Content -->
     <div class="container mx-auto px-4 py-8 max-w-5xl">
         
-        <!-- Upload Section -->
         <div id="uploadSection" class="bg-white rounded-xl shadow-md p-10 text-center transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative">
             <input type="file" id="fileInput" accept=".csv,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
             <div class="pointer-events-none" id="uploadText">
@@ -59,79 +51,47 @@
             </div>
         </div>
 
-        <!-- Dashboard Section (Hidden by default) -->
-        <div id="dashboard" class="hidden space-y-6">
-            
-            <!-- Summary Stats Cards -->
+        <!-- Debug Section (Hidden by default, shown on error) -->
+        <div id="debugSection" class="hidden mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
+            <h3 class="text-red-700 font-bold mb-2">⚠️ Debug Info</h3>
+            <p class="text-sm text-red-600 mb-2">The tool couldn't find transactions. Copy the text below to check the format:</p>
+            <textarea id="debugText" class="w-full h-32 p-2 text-xs font-mono border rounded bg-white text-gray-600" readonly></textarea>
+        </div>
+
+        <div id="dashboard" class="hidden space-y-6 mt-6">
+            <!-- Summary Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Purchases -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium uppercase">Total Purchases</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalSpent">$0.00</h3>
-                        </div>
-                        <div class="p-2 bg-red-100 rounded-lg">
-                            <i class="ph ph-shopping-cart text-red-500 text-xl"></i>
-                        </div>
-                    </div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Total Purchases</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalSpent">$0.00</h3>
                 </div>
-
-                <!-- Payments -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium uppercase">Total Payments</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalPayments">$0.00</h3>
-                        </div>
-                        <div class="p-2 bg-green-100 rounded-lg">
-                            <i class="ph ph-money text-green-500 text-xl"></i>
-                        </div>
-                    </div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Total Payments</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="totalPayments">$0.00</h3>
                 </div>
-
-                <!-- Net Flow -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium uppercase">Net Balance</p>
-                            <h3 class="text-3xl font-bold text-gray-800 mt-1" id="netFlow">$0.00</h3>
-                            <p id="netFlowLabel" class="text-xs mt-1 text-gray-500">Payments vs Spending</p>
-                        </div>
-                        <div class="p-2 bg-blue-100 rounded-lg">
-                            <i class="ph ph-scales text-blue-500 text-xl"></i>
-                        </div>
-                    </div>
+                    <p class="text-gray-500 text-sm font-medium uppercase">Net Balance</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-1" id="netFlow">$0.00</h3>
+                    <p id="netFlowLabel" class="text-xs mt-1 text-gray-500">Payments vs Spending</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <!-- Logic Engine Insights -->
                 <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
                     <div class="bg-slate-50 border-b border-gray-100 p-4 flex items-center gap-2">
                         <i class="ph ph-brain text-purple-500 text-xl"></i>
                         <h3 class="font-bold text-gray-700">Financial Insights</h3>
                     </div>
-                    <div id="suggestionsList" class="p-6 space-y-4">
-                        <!-- Logic items injected here -->
-                    </div>
+                    <div id="suggestionsList" class="p-6 space-y-4"></div>
                 </div>
-
-                <!-- Chart -->
                 <div class="bg-white rounded-xl shadow-sm p-4">
                     <h3 class="font-bold text-gray-700 mb-4 text-center">Spending Breakdown</h3>
-                    <div class="relative h-64 w-full">
-                        <canvas id="spendingChart"></canvas>
-                    </div>
+                    <div class="relative h-64 w-full"><canvas id="spendingChart"></canvas></div>
                 </div>
             </div>
 
-            <!-- Detailed Table -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100">
-                    <h3 class="font-bold text-gray-700">Spending by Category</h3>
-                </div>
+                <div class="px-6 py-4 border-b border-gray-100"><h3 class="font-bold text-gray-700">Spending by Category</h3></div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -142,167 +102,146 @@
                                 <th class="p-4 font-semibold">Status</th>
                             </tr>
                         </thead>
-                        <tbody id="breakdownTableBody" class="text-gray-700 text-sm divide-y divide-gray-100">
-                            <!-- Rows injected here -->
-                        </tbody>
+                        <tbody id="breakdownTableBody" class="text-gray-700 text-sm divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
             </div>
             
-            <button onclick="location.reload()" class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition">
-                Analyze Another File
-            </button>
+            <button onclick="location.reload()" class="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition">Analyze Another File</button>
         </div>
     </div>
 
     <script>
-        // --- 1. FILE HANDLING LOGIC ---
+        // --- 1. FILE HANDLING ---
         const dropArea = document.getElementById('uploadSection');
         const fileInput = document.getElementById('fileInput');
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-        });
-
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, preventDefaults, false));
         function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropArea.addEventListener(eventName, () => dropArea.classList.add('drag-active'), false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, () => dropArea.classList.remove('drag-active'), false);
-        });
-
+        ['dragenter', 'dragover'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.add('drag-active'), false));
+        ['dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.remove('drag-active'), false));
         dropArea.addEventListener('drop', handleDrop, false);
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files), false);
 
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
-        }
+        function handleDrop(e) { handleFiles(e.dataTransfer.files); }
 
         function handleFiles(files) {
             const file = files[0];
             if (!file) return;
-
-            // Show loading UI
             document.getElementById('uploadText').classList.add('hidden');
             document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('debugSection').classList.add('hidden');
 
-            if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-                readPDF(file);
-            } else if (file.type === "text/csv" || file.name.endsWith(".csv")) {
-                readCSV(file);
-            } else {
-                alert("Please upload a PDF or CSV file.");
-                location.reload();
-            }
+            if (file.type === "application/pdf" || file.name.endsWith(".pdf")) { readPDF(file); }
+            else if (file.type === "text/csv" || file.name.endsWith(".csv")) { readCSV(file); }
+            else { alert("Please upload a PDF or CSV."); location.reload(); }
         }
 
-        // --- 2. CSV READER ---
+        // --- 2. READERS ---
         function readCSV(file) {
             const reader = new FileReader();
-            reader.onload = function(e) { processData(e.target.result, 'csv'); };
+            reader.onload = (e) => processData(e.target.result, 'csv');
             reader.readAsText(file);
         }
 
-        // --- 3. PDF READER (The Magic Part) ---
         async function readPDF(file) {
             try {
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 let fullText = "";
-
-                // Loop through all pages
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    // Join text items with spaces
-                    const pageText = textContent.items.map(item => item.str).join(" ");
-                    fullText += pageText + "\n";
+                    // Join with special separator to preserve spacing better
+                    fullText += textContent.items.map(item => item.str).join("  ") + "\n";
                 }
-
                 processData(fullText, 'pdf');
             } catch (error) {
                 console.error(error);
-                alert("Error reading PDF. Make sure it's a valid bank statement.");
+                alert("Error reading PDF.");
                 location.reload();
             }
         }
 
-        // --- 4. DATA PROCESSING (Regex & Logic) ---
+        // --- 3. PROCESS DATA (REGEX FIX) ---
         function processData(text, type) {
             const categories = {};
             let totalSpent = 0;
             let totalPayments = 0;
+            let foundAny = false;
 
             if (type === 'pdf') {
-                // Regex for Discover PDF: Date Date Description $ Amount Category
-                // Note: PDF.js text often has weird spacing, so we use flexible whitespace \s+
-                const regex = /(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(.*?)\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
-                
-                let match;
-                while ((match = regex.exec(text)) !== null) {
-                    // match[3] = Description
-                    // match[4] = Amount (String)
-                    // match[5] = Category
+                // Clean up the text slightly
+                // Replace multiple spaces with single space
+                let cleanText = text.replace(/\s+/g, ' ');
+
+                // Pattern 1: Strict Discover (Date Date Desc $ Amount Category)
+                let regex = /(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(.*?)\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
+                let matches = [...cleanText.matchAll(regex)];
+
+                // Pattern 2: Loose (If Pattern 1 fails) - Looks for Date... $Amount...
+                if (matches.length === 0) {
+                    console.log("Trying loose regex...");
+                    // Date ... something ... $Amount ... something
+                    regex = /(\d{2}\/\d{2}\/\d{2})\s+.*?\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
+                    matches = [...cleanText.matchAll(regex)];
+                }
+
+                for (const match of matches) {
+                    foundAny = true;
+                    let amountStr = match[match.length - 3].replace(/,/g, ''); // Amount is usually 3rd from end
+                    let category = match[match.length - 2].trim(); // Category is usually 2nd from end
                     
-                    let amountStr = match[4].replace(/,/g, '');
-                    let category = match[5].trim();
-                    
-                    // Clean up category if it grabbed too much text
-                    // Stop category at "Post Date" or other common artifacts
-                    const endWords = ["DIRECT PAY", "PAYMENT"];
-                    
+                    // Fix Category if it grabbed too much (stop at common words)
+                    category = category.split(/DIRECT PAY|PAYMENT|THANK YOU/)[0].trim();
+                    if(category.length > 30) category = "Uncategorized"; // Safety check
+
                     let amount = parseFloat(amountStr);
-                    
+                    if (isNaN(amount)) continue;
+
                     if (amount > 0) {
                         totalSpent += amount;
-                        if (categories[category]) categories[category] += amount;
-                        else categories[category] = amount;
+                        categories[category] = (categories[category] || 0) + amount;
                     } else {
                         totalPayments += Math.abs(amount);
                     }
                 }
             } else {
-                // CSV Logic (Legacy support)
+                // CSV Logic
                 const lines = text.split('\n');
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i].split(',');
                     if (row.length < 4) continue;
-                    const amount = parseFloat(row[2]);
-                    const category = row[3] ? row[3].trim() : "Unknown";
-                    
+                    let amount = parseFloat(row[2]);
+                    let cat = row[3] ? row[3].trim() : "Unknown";
                     if (!amount) continue;
-
+                    foundAny = true;
                     if (amount > 0) {
                         totalSpent += amount;
-                        if (categories[category]) categories[category] += amount;
-                        else categories[category] = amount;
+                        categories[cat] = (categories[cat] || 0) + amount;
                     } else {
                         totalPayments += Math.abs(amount);
                     }
                 }
             }
-            
-            if(totalSpent === 0 && totalPayments === 0) {
-                alert("No transactions found! If using a PDF, ensure it matches the Discover statement format.");
-                location.reload();
+
+            if (!foundAny) {
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('uploadText').classList.remove('hidden');
+                document.getElementById('debugSection').classList.remove('hidden');
+                document.getElementById('debugText').value = text.slice(0, 2000) + "\n\n... (Text truncated)";
+                alert("No transactions found! Please check the 'Debug Info' box below to see what the tool saw.");
                 return;
             }
 
             updateDashboard(totalSpent, totalPayments, categories);
         }
 
-
-        // --- 5. DASHBOARD UPDATE ---
+        // --- 4. UI UPDATES ---
         function updateDashboard(spent, payments, categories) {
             document.getElementById('uploadSection').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
 
-            // Stats
             document.getElementById('totalSpent').textContent = formatMoney(spent);
             document.getElementById('totalPayments').textContent = formatMoney(payments);
             
@@ -312,98 +251,60 @@
             
             if (net >= 0) {
                 netEl.className = "text-3xl font-bold text-green-600 mt-1";
-                document.getElementById('netFlowLabel').textContent = "Surplus (Paid off more than spent)";
+                document.getElementById('netFlowLabel').textContent = "Surplus (Paid > Spent)";
             } else {
                 netEl.className = "text-3xl font-bold text-red-600 mt-1";
-                document.getElementById('netFlowLabel').textContent = "Deficit (Spent more than paid)";
+                document.getElementById('netFlowLabel').textContent = "Deficit (Spent > Paid)";
             }
 
-            // Logic Engine
             runLogicEngine(spent, payments, categories);
-
-            // Table & Chart
             renderTableAndChart(spent, categories);
         }
 
-        // --- 6. LOGIC ENGINE ---
         function runLogicEngine(spent, payments, categories) {
             const list = document.getElementById('suggestionsList');
             list.innerHTML = ''; 
-
             function addTip(title, text, type) {
-                let colorClass = "bg-blue-50 border-blue-200 text-blue-700";
-                let icon = "ph-info";
-                if (type === 'warn') { colorClass = "bg-red-50 border-red-200 text-red-700"; icon = "ph-warning-circle"; }
-                if (type === 'good') { colorClass = "bg-green-50 border-green-200 text-green-700"; icon = "ph-check-circle"; }
-
-                list.innerHTML += `
-                    <div class="border ${colorClass} rounded-lg p-4 flex gap-3 items-start">
-                        <i class="ph ${icon} text-xl mt-0.5"></i>
-                        <div><h4 class="font-bold text-sm uppercase mb-1 opacity-80">${title}</h4><p class="text-sm">${text}</p></div>
-                    </div>`;
+                let c = type==='warn'?"bg-red-50 border-red-200 text-red-700":type==='good'?"bg-green-50 border-green-200 text-green-700":"bg-blue-50 border-blue-200 text-blue-700";
+                let i = type==='warn'?"ph-warning-circle":type==='good'?"ph-check-circle":"ph-info";
+                list.innerHTML += `<div class="border ${c} rounded-lg p-4 flex gap-3 items-start"><i class="ph ${i} text-xl mt-0.5"></i><div><h4 class="font-bold text-sm uppercase mb-1 opacity-80">${title}</h4><p class="text-sm">${text}</p></div></div>`;
             }
 
-            // Rules
             if (spent > payments) addTip("Debt Warning", `You spent <b>${formatMoney(spent - payments)}</b> more than you paid off. Your balance is increasing.`, 'warn');
-            else addTip("Healthy Cash Flow", "You paid off more than you spent this month. Great work paying down debt!", 'good');
+            else addTip("Healthy Cash Flow", "You paid off more than you spent this month. Great work!", 'good');
 
             const sortedCats = Object.entries(categories).sort((a, b) => b[1] - a[1]);
             if (sortedCats.length > 0) {
                 const top = sortedCats[0];
                 const pct = ((top[1] / spent) * 100).toFixed(1);
-                addTip("Top Spending Area", `<b>${top[0]}</b> is your #1 category (${pct}% of budget). Cut 10% here to save <b>${formatMoney(top[1]*0.1)}</b>.`, 'info');
+                addTip("Top Spending Area", `<b>${top[0]}</b> is your #1 category (${pct}%). Cut 10% here to save <b>${formatMoney(top[1]*0.1)}</b>.`, 'info');
             }
 
-            // Category Specifics
-            let dining = (categories['Restaurants'] || 0) + (categories['Dining'] || 0);
-            if (dining/spent > 0.15) addTip("Dining Out", `Restaurants take up ${(dining/spent*100).toFixed(0)}% of your spending. Cooking at home more often is the easiest way to save.`, 'warn');
-            
-            let merch = (categories['Merchandise'] || 0) + (categories['Shopping'] || 0);
-            if (merch/spent > 0.20) addTip("Shopping Habits", `Merchandise is ${(merch/spent*100).toFixed(0)}% of your spend. Double check for impulse buys.`, 'info');
+            let dining = (categories['Restaurants']||0) + (categories['Dining']||0);
+            if (dining/spent > 0.15) addTip("Dining Out", `Restaurants take up ${(dining/spent*100).toFixed(0)}% of your spending. Consider cooking home more often.`, 'warn');
         }
 
-        // --- 7. VISUALS ---
         function renderTableAndChart(totalSpent, categories) {
             const tbody = document.getElementById('breakdownTableBody');
             tbody.innerHTML = '';
-            
             const sortedCats = Object.entries(categories).sort((a, b) => b[1] - a[1]);
-            const labels = [];
-            const data = [];
-            const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'];
+            const labels = [], data = [], colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'];
 
             sortedCats.forEach(([cat, amount], index) => {
                 const pct = ((amount / totalSpent) * 100).toFixed(1);
-                
-                let statusBadge = `<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold">Normal</span>`;
-                if (parseFloat(pct) > 20) statusBadge = `<span class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">High</span>`;
-                else if (parseFloat(pct) > 10) statusBadge = `<span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">Moderate</span>`;
-
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="p-4 font-medium">${cat}</td>
-                        <td class="p-4">${formatMoney(amount)}</td>
-                        <td class="p-4"><div class="flex items-center gap-2"><div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width: ${pct}%"></div></div><span class="text-xs text-gray-500">${pct}%</span></div></td>
-                        <td class="p-4">${statusBadge}</td>
-                    </tr>`;
-
-                if (index < 7) { labels.push(cat); data.push(amount); } 
+                let badge = parseFloat(pct)>20?`<span class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">High</span>`:`<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold">Normal</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50 transition"><td class="p-4 font-medium">${cat}</td><td class="p-4">${formatMoney(amount)}</td><td class="p-4"><div class="flex items-center gap-2"><div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden"><div class="h-full bg-blue-500" style="width: ${pct}%"></div></div><span class="text-xs text-gray-500">${pct}%</span></div></td><td class="p-4">${badge}</td></tr>`;
+                if (index < 7) { labels.push(cat); data.push(amount); }
             });
 
-            const ctx = document.getElementById('spendingChart').getContext('2d');
-            new Chart(ctx, {
+            new Chart(document.getElementById('spendingChart').getContext('2d'), {
                 type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }]
-                },
+                data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
             });
         }
 
-        function formatMoney(num) {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
-        }
+        function formatMoney(num) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num); }
     </script>
 </body>
 </html>
