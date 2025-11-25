@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Financial Auditor - PDF & CSV Edition</title>
+    <title>AI Financial Auditor - Universal Bank Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -19,15 +20,13 @@
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Print Styles: Clean up the page when saving to PDF */
         @media print {
             body { background-color: white; }
-            #uploadSection, #debugSection, .no-print, button { display: none !important; }
+            #uploadSection, #debugSection, .no-print, button, #calculatorSection { display: none !important; }
             #dashboard { display: block !important; margin-top: 0 !important; }
             .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #eee; }
             .bg-slate-900 { background-color: white !important; color: black !important; padding: 0 !important; margin-bottom: 20px; }
             .text-slate-400 { color: #666 !important; }
-            /* Ensure charts print clearly */
             canvas { max-height: 300px !important; }
         }
     </style>
@@ -40,7 +39,7 @@
                 <i class="ph ph-robot text-4xl text-blue-400"></i>
                 <div>
                     <h1 class="text-2xl font-bold">Financial Auditor AI</h1>
-                    <p class="text-slate-400 text-sm">100% Private • Logic Engine v2.0</p>
+                    <p class="text-slate-400 text-sm">Universal Bank Support • Privacy First</p>
                 </div>
             </div>
         </div>
@@ -51,33 +50,38 @@
         <div id="uploadSection" class="bg-white rounded-xl shadow-md p-10 text-center transition-all duration-300 border-2 border-dashed border-gray-300 hover:border-blue-400 cursor-pointer relative">
             <input type="file" id="fileInput" accept=".csv,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
             <div class="pointer-events-none" id="uploadText">
-                <i class="ph ph-file-pdf text-6xl text-red-500 mb-4 inline-block"></i>
-                <i class="ph ph-file-csv text-6xl text-green-500 mb-4 inline-block ml-4"></i>
+                <i class="ph ph-bank text-6xl text-blue-500 mb-4 inline-block"></i>
                 <h2 class="text-xl font-semibold mb-2">Upload Bank Statement</h2>
-                <p class="text-gray-500">Drag & drop your <b>PDF</b> or <b>CSV</b> file here</p>
+                <p class="text-gray-500">Drag & drop your <b>PDF</b> or <b>CSV</b> (Chase, Wells, Discover, etc.)</p>
                 <p class="text-xs text-gray-400 mt-4">(Data processed locally in your browser)</p>
             </div>
             <div id="loadingIndicator" class="hidden">
                 <div class="loader mb-3"></div>
-                <p class="text-gray-600 font-medium">Reading PDF...</p>
+                <p class="text-gray-600 font-medium">Reading PDF & Detecting Bank Format...</p>
             </div>
         </div>
 
         <!-- Debug Section -->
         <div id="debugSection" class="hidden mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
-            <h3 class="text-red-700 font-bold mb-2">⚠️ Debug Info</h3>
-            <p class="text-sm text-red-600 mb-2">The tool couldn't find transactions. Copy the text below to check the format:</p>
+            <h3 class="text-red-700 font-bold mb-2">⚠️ Parsing Error</h3>
+            <p class="text-sm text-red-600 mb-2">Could not auto-detect bank format. Copy this text to debug:</p>
             <textarea id="debugText" class="w-full h-32 p-2 text-xs font-mono border rounded bg-white text-gray-600" readonly></textarea>
         </div>
 
         <div id="dashboard" class="hidden space-y-6 mt-6">
             
             <!-- Action Bar -->
-            <div class="flex justify-between items-center no-print">
-                <h2 class="text-xl font-bold text-gray-700">Analysis Report</h2>
+            <div class="flex justify-between items-center no-print bg-white p-4 rounded-xl shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-700">Analysis Report</h2>
+                    <p id="transactionCount" class="text-sm text-gray-500">0 transactions found</p>
+                </div>
                 <div class="flex gap-2">
+                    <button onclick="downloadCleanCSV()" class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition shadow-sm">
+                        <i class="ph ph-file-csv"></i> Export Data
+                    </button>
                     <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-sm">
-                        <i class="ph ph-printer"></i> Save as PDF
+                        <i class="ph ph-printer"></i> Save PDF
                     </button>
                     <button onclick="location.reload()" class="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition">
                         <i class="ph ph-arrow-counter-clockwise"></i> Reset
@@ -102,23 +106,61 @@
                 </div>
             </div>
 
+            <!-- NEW: DEBT & SAVINGS CALCULATOR -->
+            <div id="calculatorSection" class="bg-indigo-50 border border-indigo-100 rounded-xl p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ph ph-calculator text-indigo-600 text-xl"></i>
+                    <h3 class="font-bold text-indigo-900">🔮 Future Projections</h3>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Inputs -->
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-indigo-800 mb-1">Current Total Balance (Debt)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+                                <input type="number" id="calcDebt" placeholder="e.g. 5000" class="w-full pl-8 pr-4 py-2 rounded border border-indigo-200 focus:ring-2 focus:ring-indigo-400 outline-none">
+                            </div>
+                            <p class="text-xs text-indigo-600 mt-1">Enter the total amount you owe on this card.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-indigo-800 mb-1">Interest Rate (APR)</label>
+                            <div class="relative">
+                                <span class="absolute right-4 top-2.5 text-gray-500">%</span>
+                                <input type="number" id="calcInterest" value="24" class="w-full pl-4 pr-8 py-2 rounded border border-indigo-200 focus:ring-2 focus:ring-indigo-400 outline-none">
+                            </div>
+                        </div>
+                        <button onclick="calculateProjection()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded transition">
+                            Run Calculation
+                        </button>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="bg-white rounded-lg p-6 shadow-sm flex flex-col justify-center">
+                        <h4 class="text-sm uppercase font-bold text-gray-400 mb-2">Projected Outcome</h4>
+                        <div id="calcResult">
+                            <p class="text-gray-500 italic">Enter your total debt balance to see when you will be debt-free based on this month's payment habits.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Logic Engine Insights -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="bg-slate-50 border-b border-gray-100 p-4 flex items-center gap-2">
                     <i class="ph ph-brain text-purple-500 text-xl"></i>
-                    <h3 class="font-bold text-gray-700">Actionable Advice</h3>
+                    <h3 class="font-bold text-gray-700">Financial Insights</h3>
                 </div>
                 <div id="suggestionsList" class="p-6 grid grid-cols-1 gap-4"></div>
             </div>
 
             <!-- VISUALIZATION SECTION -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Doughnut Chart -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h3 class="font-bold text-gray-700 mb-4 text-center">Budget Breakdown (%)</h3>
                     <div class="relative h-64 w-full"><canvas id="spendingChart"></canvas></div>
                 </div>
-                <!-- Bar Chart -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h3 class="font-bold text-gray-700 mb-4 text-center">Category Comparison ($)</h3>
                     <div class="relative h-64 w-full"><canvas id="barChart"></canvas></div>
@@ -146,19 +188,23 @@
     </div>
 
     <script>
+        // --- GLOBAL STATE ---
+        let cleanTransactions = []; // Stores data for export
+        let globalStats = { spent: 0, payments: 0, net: 0 }; // For calculator
+
         // --- KEYWORD BRAIN ---
         const KEYWORDS = {
-            'Groceries': ['WALMART', 'KROGER', 'SAFEWAY', 'PUBLIX', 'GROCERY', 'TRADER JOE', 'TARGET', 'WHOLE FOODS', 'COSTCO', 'ALDI', 'HEB', 'WEGMANS', 'MARKET', 'FOOD LION'],
-            'Dining': ['STARBUCKS', 'MCDONALDS', 'UBER EATS', 'DOORDASH', 'GRUBHUB', 'RESTAURANT', 'CAFE', 'GRILL', 'DINER', 'PIZZA', 'BURGER', 'CHIPOTLE', 'TACO', 'CHICK-FIL-A', 'DUNKIN', 'COFFEE', 'BAR', 'PUB', 'SUSHI', 'EAT'],
-            'Transport': ['UBER', 'LYFT', 'GAS', 'SHELL', 'CHEVRON', 'BP ', 'EXXON', 'MOBIL', 'TEXACO', 'FUEL', 'PETROL', 'SUBWAY', 'TRANSIT', 'TRAIN', 'AMTRAK', 'PARKING', 'AIRLINES', 'DELTA', 'UNITED', 'JETBLUE', 'METRO'],
-            'Utilities': ['ELECTRIC', 'WATER', 'POWER', 'ENERGY', 'PG&E', 'COMCAST', 'VERIZON', 'AT&T', 'T-MOBILE', 'INTERNET', 'UTILITY', 'WASTE', 'SEWER', 'INSURANCE'],
-            'Subscriptions': ['NETFLIX', 'SPOTIFY', 'HULU', 'DISNEY', 'HBO', 'AMAZON PRIME', 'APPLE.COM', 'ITUNES', 'GOOGLE', 'YOUTUBE', 'PATREON', 'SUBSCRIPTION'],
-            'Shopping': ['AMAZON', 'EBAY', 'ETSY', 'BEST BUY', 'APPLE STORE', 'NIKE', 'ZARA', 'H&M', 'UNIQLO', 'CLOTHING', 'SHOES', 'MALL', 'TJ MAXX', 'MARSHALLS', 'ROSS'],
-            'Housing': ['RENT', 'MORTGAGE', 'APARTMENT', 'HOA', 'LODGING', 'HOTEL', 'AIRBNB'],
+            'Groceries': ['WALMART', 'KROGER', 'SAFEWAY', 'PUBLIX', 'GROCERY', 'TRADER JOE', 'TARGET', 'WHOLE FOODS', 'COSTCO', 'ALDI', 'HEB', 'WEGMANS', 'MARKET', 'FOOD LION', '7-ELEVEN'],
+            'Dining': ['STARBUCKS', 'MCDONALDS', 'UBER EATS', 'DOORDASH', 'GRUBHUB', 'RESTAURANT', 'CAFE', 'GRILL', 'DINER', 'PIZZA', 'BURGER', 'CHIPOTLE', 'TACO', 'CHICK-FIL-A', 'DUNKIN', 'COFFEE', 'BAR', 'PUB', 'SUSHI', 'EAT', 'FOOD', 'DINNER', 'LUNCH'],
+            'Transport': ['UBER', 'LYFT', 'GAS', 'SHELL', 'CHEVRON', 'BP ', 'EXXON', 'MOBIL', 'TEXACO', 'FUEL', 'PETROL', 'SUBWAY', 'TRANSIT', 'TRAIN', 'AMTRAK', 'PARKING', 'AIRLINES', 'DELTA', 'UNITED', 'JETBLUE', 'METRO', 'TOLL', 'AUTOMOTIVE'],
+            'Utilities': ['ELECTRIC', 'WATER', 'POWER', 'ENERGY', 'PG&E', 'COMCAST', 'VERIZON', 'AT&T', 'T-MOBILE', 'INTERNET', 'UTILITY', 'WASTE', 'SEWER', 'INSURANCE', 'GEICO', 'STATE FARM', 'PROGRESSIVE'],
+            'Subscriptions': ['NETFLIX', 'SPOTIFY', 'HULU', 'DISNEY', 'HBO', 'AMAZON PRIME', 'APPLE.COM', 'ITUNES', 'GOOGLE', 'YOUTUBE', 'PATREON', 'SUBSCRIPTION', 'MEMBER', 'CHATGPT', 'OPENAI'],
+            'Shopping': ['AMAZON', 'EBAY', 'ETSY', 'BEST BUY', 'APPLE STORE', 'NIKE', 'ZARA', 'H&M', 'UNIQLO', 'CLOTHING', 'SHOES', 'MALL', 'TJ MAXX', 'MARSHALLS', 'ROSS', 'HOME DEPOT', 'LOWES', 'IKEA'],
+            'Housing': ['RENT', 'MORTGAGE', 'APARTMENT', 'HOA', 'LODGING', 'HOTEL', 'AIRBNB', 'RESORT'],
             'Education': ['COLLEGE', 'UNIVERSITY', 'SCHOOL', 'TUITION', 'BOOKS', 'UDEMY', 'COURSERA', 'STUDENT'],
-            'Health': ['PHARMACY', 'CVS', 'WALGREENS', 'RITE AID', 'DOCTOR', 'DENTAL', 'HOSPITAL', 'CLINIC', 'MEDICAL', 'FITNESS', 'GYM', 'HEALTH'],
-            'Income': ['PAYCHECK', 'DEPOSIT', 'SALARY', 'EMPLOYER', 'DIRECT DEPOSIT', 'REFUND'],
-            'Payments': ['PAYMENT', 'CREDIT CARD', 'THANK YOU', 'DIRECT PAY']
+            'Health': ['PHARMACY', 'CVS', 'WALGREENS', 'RITE AID', 'DOCTOR', 'DENTAL', 'HOSPITAL', 'CLINIC', 'MEDICAL', 'FITNESS', 'GYM', 'HEALTH', 'PLANET FITNESS'],
+            'Income': ['PAYCHECK', 'DEPOSIT', 'SALARY', 'EMPLOYER', 'DIRECT DEPOSIT', 'REFUND', 'VENMO CASHOUT'],
+            'Payments': ['PAYMENT', 'CREDIT CARD', 'THANK YOU', 'DIRECT PAY', 'AUTOPAY']
         };
 
         function detectCategory(description, rawCategory) {
@@ -168,7 +214,8 @@
                     return category;
                 }
             }
-            if (rawCategory && rawCategory.length > 2 && rawCategory !== "Uncategorized") {
+            // Fallback to bank category if available
+            if (rawCategory && rawCategory.length > 2 && !rawCategory.includes("Uncategorized")) {
                 return rawCategory.trim();
             }
             return "Miscellaneous";
@@ -178,14 +225,11 @@
         const dropArea = document.getElementById('uploadSection');
         const fileInput = document.getElementById('fileInput');
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, preventDefaults, false));
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, (ev) => { ev.preventDefault(); ev.stopPropagation(); }, false));
         ['dragenter', 'dragover'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.add('drag-active'), false));
         ['dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.remove('drag-active'), false));
-        dropArea.addEventListener('drop', handleDrop, false);
+        dropArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files), false);
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files), false);
-
-        function handleDrop(e) { handleFiles(e.dataTransfer.files); }
 
         function handleFiles(files) {
             const file = files[0];
@@ -214,6 +258,7 @@
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
+                    // Join with double space to preserve column separation better
                     fullText += textContent.items.map(item => item.str).join("  ") + "\n";
                 }
                 processData(fullText, 'pdf');
@@ -224,78 +269,129 @@
             }
         }
 
-        // --- 3. PROCESS DATA ---
+        // --- 3. UNIVERSAL PARSER ENGINE ---
         function processData(text, type) {
             const categories = {};
+            cleanTransactions = []; // Reset for export
             let totalSpent = 0;
             let totalPayments = 0;
-            let foundAny = false;
+            let foundTransactions = false;
 
-            if (type === 'pdf') {
-                let cleanText = text.replace(/\s+/g, ' ');
-                let regex = /(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(.*?)\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
-                let matches = [...cleanText.matchAll(regex)];
+            // --- STRATEGY 1: DISCOVER (Date Date Desc $ Amount Cat) ---
+            const discoverRegex = /(\d{2}\/\d{2}\/\d{2})\s+(\d{2}\/\d{2}\/\d{2})\s+(.*?)\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
+            
+            // --- STRATEGY 2: GENERIC/CHASE/WELLS (Date ... Desc ... Amount) ---
+            const genericRegex = /(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.*?)\s+(-?[\d,]+\.\d{2})/g;
 
-                if (matches.length === 0) {
-                    regex = /(\d{2}\/\d{2}\/\d{2})\s+.*?\s+\$\s*(-?[\d,]+\.\d{2})\s+(.*?)(\d{2}\/\d{2}\/\d{2}|$)/g;
-                    matches = [...cleanText.matchAll(regex)];
-                }
+            let cleanText = text.replace(/\s+/g, ' '); // Flatten text for regex
+            
+            // Try Discover First
+            let matches = [...cleanText.matchAll(discoverRegex)];
+            let parserMode = "DISCOVER";
 
-                for (const match of matches) {
-                    foundAny = true;
-                    let description = match[match.length - 4] || match[3];
-                    if(!description) description = match[0]; 
+            // If no Discover matches, try Generic
+            if (matches.length === 0) {
+                console.log("Discover pattern failed. Trying Generic pattern...");
+                matches = [...cleanText.matchAll(genericRegex)];
+                parserMode = "GENERIC";
+            }
 
-                    let amountStr = match[match.length - 3].replace(/,/g, '');
-                    let rawCategory = match[match.length - 2].trim();
-                    rawCategory = rawCategory.split(/DIRECT PAY|PAYMENT|THANK YOU/)[0].trim();
+            // Parse Matches
+            for (const match of matches) {
+                foundTransactions = true;
+                let date, description, amount, category;
 
-                    let category = detectCategory(description, rawCategory);
-
-                    let amount = parseFloat(amountStr);
-                    if (isNaN(amount)) continue;
-
-                    if (amount > 0) {
-                        totalSpent += amount;
-                        categories[category] = (categories[category] || 0) + amount;
+                if (parserMode === "DISCOVER") {
+                    date = match[1];
+                    description = match[3];
+                    let amountStr = match[4].replace(/,/g, '');
+                    amount = parseFloat(amountStr);
+                    let rawCat = match[5].trim().split(/DIRECT PAY|PAYMENT|THANK YOU/)[0].trim();
+                    category = detectCategory(description, rawCat);
+                } 
+                else {
+                    // GENERIC PARSER
+                    date = match[1];
+                    let rawDesc = match[2].trim();
+                    description = rawDesc.replace(/\.{2,}/g, '').trim();
+                    
+                    let amountStr = match[3].replace(/,/g, '');
+                    amount = parseFloat(amountStr);
+                    
+                    if (description.toUpperCase().includes("PAYMENT") || description.toUpperCase().includes("DEPOSIT")) {
+                        category = (description.toUpperCase().includes("PAYMENT")) ? "Payments" : "Income";
                     } else {
-                        totalPayments += Math.abs(amount);
+                        category = detectCategory(description, "");
                     }
                 }
-            } else {
+
+                if (isNaN(amount)) continue;
+
+                let isExpense = false;
+                if (category === "Payments" || category === "Income") {
+                    totalPayments += Math.abs(amount);
+                } else {
+                    isExpense = true;
+                    if (amount < 0) {
+                        totalPayments += Math.abs(amount);
+                        isExpense = false;
+                    } else {
+                        totalSpent += amount;
+                        categories[category] = (categories[category] || 0) + amount;
+                    }
+                }
+
+                cleanTransactions.push({
+                    date: date,
+                    description: description,
+                    amount: amount,
+                    category: category,
+                    type: isExpense ? "Expense" : "Payment/Income"
+                });
+            }
+
+            if (!foundTransactions && type === 'csv') {
                 const lines = text.split('\n');
                 for (let i = 1; i < lines.length; i++) {
                     const row = lines[i].split(',');
-                    if (row.length < 4) continue;
-                    let description = row[1];
-                    let amount = parseFloat(row[2]);
-                    let rawCat = row[3] ? row[3].trim() : "";
-                    if (!amount) continue;
-                    foundAny = true;
-                    let category = detectCategory(description, rawCat);
-                    if (amount > 0) {
-                        totalSpent += amount;
-                        categories[category] = (categories[category] || 0) + amount;
+                    if (row.length < 3) continue;
+                    let amt = parseFloat(row[2]);
+                    if(isNaN(amt)) continue;
+                    
+                    let desc = row[1];
+                    let cat = detectCategory(desc, row[3]||"");
+                    
+                    foundTransactions = true;
+                    if (amt > 0) {
+                        totalSpent += amt;
+                        categories[cat] = (categories[cat] || 0) + amt;
                     } else {
-                        totalPayments += Math.abs(amount);
+                        totalPayments += Math.abs(amt);
                     }
+                    cleanTransactions.push({ date: row[0], description: desc, amount: amt, category: cat, type: amt>0?"Expense":"Payment" });
                 }
             }
 
-            if (!foundAny) {
+            if (!foundTransactions) {
                 document.getElementById('loadingIndicator').classList.add('hidden');
                 document.getElementById('uploadText').classList.remove('hidden');
                 document.getElementById('debugSection').classList.remove('hidden');
-                document.getElementById('debugText').value = text.slice(0, 2000) + "\n\n... (Text truncated)";
-                alert("No transactions found! Please check the 'Debug Info' box.");
+                document.getElementById('debugText').value = text.slice(0, 2000) + "\n\n... (Truncated)";
+                alert("No transactions found. The tool tried generic bank formats but failed.");
                 return;
             }
 
+            document.getElementById('transactionCount').textContent = `${cleanTransactions.length} transactions analyzed`;
             updateDashboard(totalSpent, totalPayments, categories);
         }
 
         // --- 4. UI UPDATES ---
         function updateDashboard(spent, payments, categories) {
+            // Save global stats for calculator
+            globalStats.spent = spent;
+            globalStats.payments = payments;
+            globalStats.net = payments - spent;
+
             document.getElementById('uploadSection').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
 
@@ -318,7 +414,66 @@
             renderTableAndChart(spent, categories);
         }
 
-        // --- 5. LOGIC ENGINE (THE AI) ---
+        // --- 5. CALCULATOR LOGIC ---
+        function calculateProjection() {
+            const debt = parseFloat(document.getElementById('calcDebt').value) || 0;
+            const rate = parseFloat(document.getElementById('calcInterest').value) || 0;
+            const monthlySurplus = globalStats.net;
+            const resultBox = document.getElementById('calcResult');
+
+            if (debt === 0) {
+                // SAVINGS MODE
+                if (monthlySurplus > 0) {
+                    const yearSave = monthlySurplus * 12;
+                    resultBox.innerHTML = `
+                        <div class="text-green-700 font-bold text-lg mb-1">Savings Growth</div>
+                        <p>You have no debt entered! If you save your <b>${formatMoney(monthlySurplus)}</b> surplus every month:</p>
+                        <ul class="list-disc ml-5 mt-2 text-sm">
+                            <li>In 6 months: <b>${formatMoney(monthlySurplus * 6)}</b></li>
+                            <li>In 1 year: <b>${formatMoney(yearSave)}</b></li>
+                        </ul>`;
+                } else {
+                    resultBox.innerHTML = `<div class="text-red-600 font-bold">Deficit Warning</div><p>You are spending more than you earn/pay. You cannot save or pay off debt until your Net Balance is positive.</p>`;
+                }
+                return;
+            }
+
+            // DEBT PAYOFF MODE
+            if (monthlySurplus <= 0) {
+                resultBox.innerHTML = `
+                    <div class="text-red-600 font-bold text-lg mb-1">Warning: Debt Growing</div>
+                    <p>Your Net Balance is negative or zero. You are <b>not making progress</b> on your ${formatMoney(debt)} debt.</p>
+                    <p class="mt-2 text-sm">At ${rate}% APR, your debt will grow by approx <b>${formatMoney((debt * (rate/100))/12)}</b> in interest next month alone.</p>
+                `;
+            } else {
+                // N = -log(1 - (r*P)/M) / log(1+r)
+                // r = monthly rate, P = Principal, M = Monthly Payment
+                const r = (rate / 100) / 12;
+                const P = debt;
+                const M = monthlySurplus; // Assuming entire surplus goes to debt
+
+                // Check if payment covers interest
+                if (M <= P * r) {
+                    resultBox.innerHTML = `<div class="text-red-600 font-bold">Interest Trap</div><p>Your surplus (${formatMoney(M)}) is less than the monthly interest (${formatMoney(P*r)}). You will never pay this off at this rate.</p>`;
+                    return;
+                }
+
+                const months = -Math.log(1 - (r * P) / M) / Math.log(1 + r);
+                const totalMonths = Math.ceil(months);
+                const totalInterest = (M * totalMonths) - P;
+
+                resultBox.innerHTML = `
+                    <div class="text-indigo-700 font-bold text-lg mb-1">Debt Free in ${totalMonths} Months</div>
+                    <p class="text-sm mb-2">If you put your entire <b>${formatMoney(monthlySurplus)}</b> surplus towards this debt every month:</p>
+                    <div class="bg-indigo-100 p-3 rounded text-sm">
+                        <p>📅 Date: <b>${new Date(new Date().setMonth(new Date().getMonth() + totalMonths)).toLocaleDateString('en-US', {month:'long', year:'numeric'})}</b></p>
+                        <p>💸 Total Interest Paid: <b>${formatMoney(totalInterest)}</b></p>
+                    </div>
+                `;
+            }
+        }
+
+        // --- 6. LOGIC ENGINE ---
         function runLogicEngine(spent, payments, categories) {
             const list = document.getElementById('suggestionsList');
             list.innerHTML = ''; 
@@ -328,11 +483,9 @@
                 list.innerHTML += `<div class="border ${c} rounded-lg p-4 flex gap-3 items-start"><i class="ph ${i} text-xl mt-0.5"></i><div><h4 class="font-bold text-sm uppercase mb-1 opacity-80">${title}</h4><p class="text-sm">${text}</p></div></div>`;
             }
 
-            // 1. Debt Check
             if (spent > payments) addTip("Debt Warning", `You spent <b>${formatMoney(spent - payments)}</b> more than you paid off. Your balance is increasing.`, 'warn');
-            else addTip("Healthy Cash Flow", `You paid off more than you spent this month. Consider moving the <b>${formatMoney(payments - spent)}</b> surplus to a High-Yield Savings Account.`, 'good');
+            else addTip("Healthy Cash Flow", `You paid off more than you spent this month. Use the calculator above to see how fast you can clear debt!`, 'good');
 
-            // 2. Top Expense
             const sortedCats = Object.entries(categories).sort((a, b) => b[1] - a[1]);
             if (sortedCats.length > 0) {
                 const top = sortedCats[0];
@@ -340,19 +493,36 @@
                 addTip("Top Spending Area", `<b>${top[0]}</b> is your #1 category (${pct}%). Cut 10% here to save <b>${formatMoney(top[1]*0.1)}</b>.`, 'info');
             }
 
-            // 3. Dining Check
             let dining = (categories['Restaurants']||0) + (categories['Dining']||0);
             if (dining/spent > 0.15) addTip("Dining Alert", `Restaurants take up ${(dining/spent*100).toFixed(0)}% of your spending. Cooking at home more often is the easiest way to save.`, 'warn');
 
-            // 4. Subscriptions Check
             let subs = categories['Subscriptions'] || 0;
             if (subs > 50) addTip("Subscription Audit", `You spent <b>${formatMoney(subs)}</b> on subscriptions. Check if you are actually using all of these services.`, 'warn');
 
-            // 5. Shopping Check
             let shopping = (categories['Shopping']||0) + (categories['Merchandise']||0);
             if (shopping/spent > 0.15) addTip("Impulse Buying Check", `Shopping is ${(shopping/spent*100).toFixed(0)}% of your budget. Try the '24-hour rule' before buying non-essentials.`, 'info');
         }
 
+        // --- 7. EXPORT FUNCTION ---
+        function downloadCleanCSV() {
+            if (cleanTransactions.length === 0) return alert("No data to export!");
+            
+            let csvContent = "data:text/csv;charset=utf-8,Date,Description,Category,Type,Amount\n";
+            cleanTransactions.forEach(row => {
+                let safeDesc = row.description.replace(/,/g, " "); // Remove commas from desc to prevent csv break
+                csvContent += `${row.date},${safeDesc},${row.category},${row.type},${row.amount}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "my_clean_finances.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- 8. CHARTS ---
         function renderTableAndChart(totalSpent, categories) {
             const tbody = document.getElementById('breakdownTableBody');
             tbody.innerHTML = '';
@@ -366,14 +536,18 @@
                 if (index < 7) { labels.push(cat); data.push(amount); }
             });
 
-            // CHART 1: DOUGHNUT
+            // Destroy old charts if they exist
+            let chartStatus = Chart.getChart("spendingChart"); 
+            if (chartStatus != undefined) chartStatus.destroy();
+            chartStatus = Chart.getChart("barChart"); 
+            if (chartStatus != undefined) chartStatus.destroy();
+
             new Chart(document.getElementById('spendingChart').getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
             });
 
-            // CHART 2: BAR CHART
             new Chart(document.getElementById('barChart').getContext('2d'), {
                 type: 'bar',
                 data: { 
